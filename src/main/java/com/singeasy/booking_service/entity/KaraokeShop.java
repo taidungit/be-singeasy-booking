@@ -38,10 +38,10 @@ public class KaraokeShop {
     @OneToMany(mappedBy = "shop", cascade = CascadeType.ALL)
     private List<Highlight> highlights;
 
-    @OneToMany(mappedBy = "shop", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "shop", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Label> labels;
 
-    @OneToMany(mappedBy = "shop", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "shop", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Amenity> amenities;
 
     @OneToMany(mappedBy = "shop")

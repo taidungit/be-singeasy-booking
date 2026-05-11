@@ -1,84 +1,114 @@
 package com.singeasy.booking_service.service;
 
-import java.util.ArrayList;
 import java.util.List;
-
+import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
-
-import com.singeasy.booking_service.dto.shop.ShopUpdateDto;
+import com.singeasy.booking_service.dto.req.ShopReqDto;
+import com.singeasy.booking_service.dto.res.ShopResDto;
 import com.singeasy.booking_service.entity.Amenity;
 import com.singeasy.booking_service.entity.KaraokeShop;
 import com.singeasy.booking_service.entity.Label;
 import com.singeasy.booking_service.enums.ShopStatus;
 import com.singeasy.booking_service.repository.ShopRepository;
 
-@Service
-    public class ShopService {
-        private final ShopRepository shopRepository;
-        public ShopService(ShopRepository shopRepository) {
-            this.shopRepository = shopRepository;
-        }
-        public List<KaraokeShop> findShops() {
-            return shopRepository.findByStatusNot(ShopStatus.DELETED);
-        }
-        public KaraokeShop getById(Long id) {
-            return shopRepository.findByIdAndStatusNot(id, ShopStatus.DELETED)
-                    .orElseThrow(() -> new RuntimeException("Shop not found"));
-        }
+import jakarta.transaction.Transactional;
 
-        public KaraokeShop createShop(ShopUpdateDto dto) {
-        KaraokeShop shop = new KaraokeShop();
-        updateEntityFromDto(shop, dto);
-        return shopRepository.save(shop);
+@Service
+public class ShopService {
+    private final ShopRepository shopRepository;
+    private final ModelMapper modelMapper;
+
+    public ShopService(ShopRepository shopRepository, ModelMapper modelMapper) {
+        this.shopRepository = shopRepository;
+        this.modelMapper = modelMapper;
     }
 
-    public KaraokeShop updateShop(Long id, ShopUpdateDto dto) {
+    public List<ShopResDto> findShops() {
+        return shopRepository.findByStatusNot(ShopStatus.DELETED)
+                .stream()
+                .map(this::convertToResDto)
+                .toList();
+    }
+
+    public ShopResDto getById(Long id) {
         KaraokeShop shop = shopRepository.findByIdAndStatusNot(id, ShopStatus.DELETED)
                 .orElseThrow(() -> new RuntimeException("Shop not found"));
-        // Gọi hàm map chung
-        updateEntityFromDto(shop, dto);
-        return shopRepository.save(shop);
+        return convertToResDto(shop);
     }
 
-    // Hàm bổ trợ để dùng chung logic
-    private void updateEntityFromDto(KaraokeShop shop, ShopUpdateDto dto) {
-        shop.setName(dto.getName());
-        shop.setCity(dto.getCity());
-        shop.setPhoneNumber(dto.getPhoneNumber());
-        shop.setAddress(dto.getAddress());
-        shop.setOpeningHours(dto.getOpeningHours());
-        shop.setMinPricePerHour(dto.getMinPricePerHour());
-        shop.setImageUrl(dto.getImageUrl());
-        shop.setDescription(dto.getDescription());
-
-        // Xử lý Labels
+    @Transactional
+    public ShopResDto createShop(ShopReqDto dto) {
+        KaraokeShop shop = modelMapper.map(dto, KaraokeShop.class);
+        
         if (dto.getLabels() != null) {
-            if (shop.getLabels() == null) shop.setLabels(new ArrayList<>());
-            shop.getLabels().clear();
-            dto.getLabels().forEach(name -> {
+            shop.setLabels(dto.getLabels().stream().map(name -> {
                 Label label = new Label();
                 label.setName(name);
                 label.setShop(shop);
-                shop.getLabels().add(label);
-            });
+                return label;
+            }).toList());
         }
-
-        // Xử lý Amenities
         if (dto.getAmenities() != null) {
-            if (shop.getAmenities() == null) shop.setAmenities(new ArrayList<>());
-            shop.getAmenities().clear();
-            dto.getAmenities().forEach(name -> {
+            shop.setAmenities(dto.getAmenities().stream().map(name -> {
                 Amenity amenity = new Amenity();
                 amenity.setName(name);
                 amenity.setShop(shop);
-                shop.getAmenities().add(amenity);
-            });
+                return amenity;
+            }).toList());
         }
+        
+        return convertToResDto(shopRepository.save(shop));
     }
 
+@Transactional
+public ShopResDto updateShop(Long id, ShopReqDto dto) {
+    KaraokeShop existingShop = shopRepository.findByIdAndStatusNot(id, ShopStatus.DELETED)
+            .orElseThrow(() -> new RuntimeException("Shop not found"));
+
+    modelMapper.map(dto, existingShop);
+    if (dto.getLabels() != null) {
+        existingShop.getLabels().clear(); 
+        
+        dto.getLabels().forEach(name -> {
+            Label label = new Label();
+            label.setName(name);
+            label.setShop(existingShop);
+            existingShop.getLabels().add(label); 
+        });
+    }
+
+    if (dto.getAmenities() != null) {
+        existingShop.getAmenities().clear(); 
+        
+        dto.getAmenities().forEach(name -> {
+            Amenity amenity = new Amenity();
+            amenity.setName(name);
+            amenity.setShop(existingShop);
+            existingShop.getAmenities().add(amenity);
+        });
+    }
+
+    return convertToResDto(shopRepository.save(existingShop));
+}
+
     public void deleteShop(Long id) {
-        KaraokeShop shop = getById(id);
+        KaraokeShop shop = shopRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Shop not found"));
         shop.setStatus(ShopStatus.DELETED);
         shopRepository.save(shop);
+    }
+
+
+    private ShopResDto convertToResDto(KaraokeShop shop) {
+        ShopResDto res = modelMapper.map(shop, ShopResDto.class);
+        
+        if (shop.getLabels() != null) {
+            res.setLabels(shop.getLabels().stream().map(Label::getName).toList());
+        }
+        if (shop.getAmenities() != null) {
+            res.setAmenities(shop.getAmenities().stream().map(Amenity::getName).toList());
+        }
+        
+        return res;
     }
 }

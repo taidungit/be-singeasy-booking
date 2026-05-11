@@ -15,7 +15,7 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/**").permitAll() // cho phép hết
+                .requestMatchers("/api/v1/**").permitAll() // cho phép hết
                 .anyRequest().authenticated()
             );
 
