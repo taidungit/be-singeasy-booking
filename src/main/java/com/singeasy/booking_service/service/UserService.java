@@ -71,4 +71,31 @@ public class UserService {
         }
         userRepository.deleteById(id);
     }
+
+    public User getUserByEmail(String email){
+       return this.userRepository.findByEmail(email).orElseThrow(()->new RuntimeException("User not found"));
+    }
+
+        public void updateUserToken(String token,String email){
+        User currentUser=this.getUserByEmail(email);
+        if(currentUser!=null){
+            currentUser.setRefreshToken(token);
+            this.userRepository.save(currentUser);
+        }
+    }
+    public User getUserByRefreshTokenAndEmail(String token,String email){
+        return this.userRepository.findByRefreshTokenAndEmail(token, email);
+    }
+
+        public boolean isEmailExist(String email){
+        return this.userRepository.existsByEmail(email);
+    }
+
+    public UserResDto convertResCreateUserDTO(User user){
+        return modelMapper.map(user, UserResDto.class);
+    }
+
+    public User createUser(User user){
+        return this.userRepository.save(user);
+    }
 }

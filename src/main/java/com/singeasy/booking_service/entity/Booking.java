@@ -3,7 +3,11 @@ package com.singeasy.booking_service.entity;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
+import com.singeasy.booking_service.enums.BookingStatusEnum;
+
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -24,7 +28,8 @@ public class Booking {
     private Double pricePerHour;   
     private Double serviceFee;     
     private Double totalAmount;    // = pricePerHour * duration + serviceFee
-    private String status;// PENDING, CONFIRMED, CANCELLED
+    @Enumerated(EnumType.STRING)
+    private BookingStatusEnum status;// PENDING, CONFIRMED, CANCELLED
 
     @ManyToOne
     @JoinColumn(name = "user_id")

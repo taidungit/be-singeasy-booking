@@ -17,7 +17,7 @@ import com.singeasy.booking_service.dto.res.RoomResDto;
 import com.singeasy.booking_service.service.RoomService;
 
 @RestController
-@RequestMapping("/api/v1/")
+@RequestMapping("/api/v1")
 public class RoomController {
 
     private final RoomService roomService;
@@ -33,6 +33,11 @@ public class RoomController {
             @RequestBody RoomReqDto roomDto) {
         return ResponseEntity.status(HttpStatus.CREATED)
                              .body(roomService.addRoomToShop(shopId, roomDto));
+    }
+
+    @GetMapping("/rooms/{roomId}")
+    public ResponseEntity<RoomResDto> getRoomById(@PathVariable Long roomId) {
+        return ResponseEntity.ok(roomService.getRoomById(roomId));
     }
 
     // PUT /api/v1/rooms/10

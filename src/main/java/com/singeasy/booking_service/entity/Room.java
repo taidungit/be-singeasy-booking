@@ -5,7 +5,7 @@ import java.util.List;
 
 import com.singeasy.booking_service.enums.RoomStatus;
 
-import jakarta.persistence.ElementCollection;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -14,6 +14,9 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.Lob;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import lombok.Data;
 
@@ -33,10 +36,17 @@ public class Room {
     @Enumerated(EnumType.STRING)
     private RoomStatus status;
     
+    @Lob
+    @Column(name = "image_url", columnDefinition = "LONGTEXT")
     private String imageUrl;
 
-    @ElementCollection
-    private List<String> amenities;
+    @ManyToMany
+    @JoinTable(
+        name = "room_amenity",
+        joinColumns = @JoinColumn(name = "room_id"),
+        inverseJoinColumns = @JoinColumn(name = "amenity_id")
+    )
+    private List<Amenity> amenities;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "shop_id") 
