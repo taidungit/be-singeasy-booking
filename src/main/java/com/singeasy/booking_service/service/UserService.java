@@ -1,0 +1,74 @@
+package com.singeasy.booking_service.service;
+
+import com.singeasy.booking_service.dto.req.UserReqDto;
+import com.singeasy.booking_service.dto.res.UserResDto;
+import com.singeasy.booking_service.entity.User;
+import com.singeasy.booking_service.repository.UserRepository;
+
+import org.modelmapper.ModelMapper;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+@Service
+public class UserService {
+    private final UserRepository userRepository;
+    private final ModelMapper modelMapper;
+    private final PasswordEncoder passwordEncoder;
+
+    public UserService(UserRepository userRepository, ModelMapper modelMapper, PasswordEncoder passwordEncoder) {
+        this.userRepository = userRepository;
+        this.modelMapper = modelMapper;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+
+    public List<UserResDto> getAllUsers() {
+        return userRepository.findAll().stream()
+                .map(user -> modelMapper.map(user, UserResDto.class))
+                .toList();
+    }
+
+    public UserResDto getUserById(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return modelMapper.map(user, UserResDto.class);
+    }
+
+    @Transactional
+    public UserResDto createUser(UserReqDto dto) {
+        if (userRepository.findByEmail(dto.getEmail()).isPresent()) {
+            throw new RuntimeException("Email already exists");
+        }
+        User user = modelMapper.map(dto, User.class);
+        user.setPassword(passwordEncoder.encode(dto.getPassword()));
+        return modelMapper.map(userRepository.save(user), UserResDto.class);
+    }
+
+    @Transactional
+    public UserResDto updateUser(Long id, UserReqDto dto) {
+        User existingUser = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        // Cập nhật thông tin từ DTO vào Entity hiện tại
+        modelMapper.map(dto, existingUser);
+        dto.setRole(dto.getRole());
+        // Nếu có thay đổi password thì phải mã hóa lại
+        if (dto.getPassword() != null && !dto.getPassword().isEmpty()) {
+            existingUser.setPassword(passwordEncoder.encode(dto.getPassword()));
+        }
+
+        return modelMapper.map(userRepository.save(existingUser), UserResDto.class);
+    }
+
+
+    @Transactional
+    public void deleteUser(Long id) {
+        if (!userRepository.existsById(id)) {
+            throw new RuntimeException("User not found");
+        }
+        userRepository.deleteById(id);
+    }
+}

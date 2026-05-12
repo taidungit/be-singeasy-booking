@@ -1,9 +1,21 @@
 package com.singeasy.booking_service.entity;
 
-import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import java.util.List;
+import com.singeasy.booking_service.enums.RoleEnum;
+
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Lob;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "users") 
@@ -21,19 +33,19 @@ public class User {
     private String email;
 
     @Column(nullable = false)
-    private String password; // Lưu password đã mã hóa (BCrypt)
+    private String password; 
 
+    @Lob
+    @Column(name = "avatar", columnDefinition = "LONGTEXT")
     private String avatar;
 
     private String phoneNumber;
 
     @Enumerated(EnumType.STRING)
-    private Role role;
+    private RoleEnum role;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     private List<Booking> bookings;
 
-    public enum Role {
-        admin, user
-    }
+
 }
