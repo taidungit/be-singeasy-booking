@@ -35,7 +35,7 @@ public class BookingService {
         Room room = roomRepository.findById(dto.getRoomId())
                 .orElseThrow(() -> new RuntimeException("Room not found"));
 
-        if (room.getStatus() != RoomStatus.AVAILABLE) {
+        if (!room.getStatus().equals(RoomStatus.AVAILABLE.name())) {
             throw new RuntimeException("Room is not available");
         }
 
@@ -56,7 +56,7 @@ public class BookingService {
         booking.setRoom(room);
 
         // Update room status
-        room.setStatus(RoomStatus.OCCUPIED);
+        room.setStatus(RoomStatus.OCCUPIED.name());
         roomRepository.save(room);
 
         Booking savedBooking = bookingRepository.save(booking);
@@ -73,7 +73,7 @@ public class BookingService {
 
         // 2. Release the room back to AVAILABLE
         Room room = booking.getRoom();
-        room.setStatus(RoomStatus.AVAILABLE);
+        room.setStatus(RoomStatus.AVAILABLE.name());
         roomRepository.save(room);
 
         return convertToResDto(bookingRepository.save(booking));

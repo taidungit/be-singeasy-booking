@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -35,13 +36,13 @@ public class RoomController {
                              .body(roomService.addRoomToShop(shopId, roomDto));
     }
 
-    @GetMapping("/rooms/{roomId}")
+    @GetMapping("/shops/{shopId}/rooms/{roomId}")
     public ResponseEntity<RoomResDto> getRoomById(@PathVariable Long roomId) {
         return ResponseEntity.ok(roomService.getRoomById(roomId));
     }
 
     // PUT /api/v1/rooms/10
-    @PutMapping("/rooms/{roomId}")
+    @PutMapping("/shops/{shopId}/rooms/{roomId}")
     public ResponseEntity<RoomResDto> updateRoom(
             @PathVariable Long roomId, 
             @RequestBody RoomReqDto roomDto) {
@@ -52,5 +53,11 @@ public class RoomController {
     @GetMapping("/shops/{shopId}/rooms")
     public ResponseEntity<List<RoomResDto>> getRoomsByShop(@PathVariable Long shopId) {
         return ResponseEntity.ok(roomService.getRoomsByShop(shopId));
+    }
+
+    @DeleteMapping("/shops/{shopId}/rooms/{roomId}")
+    public ResponseEntity<Void> deleteRoom(@PathVariable Long roomId) {
+        roomService.deleteRoom(roomId);
+        return ResponseEntity.noContent().build(); 
     }
 }

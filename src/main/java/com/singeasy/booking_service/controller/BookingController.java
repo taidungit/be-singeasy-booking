@@ -50,4 +50,6 @@ public class BookingController {
         User user = userService.getUserByEmail(email);
         return ResponseEntity.ok(bookingService.getUserHistory(user.getId()));
     }
+
+    
 }

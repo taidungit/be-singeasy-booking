@@ -33,8 +33,8 @@ public class Room {
     
     private Double pricePerHour;
     
-    @Enumerated(EnumType.STRING)
-    private RoomStatus status;
+    @Column(name = "status", columnDefinition = "VARCHAR(30) ") 
+    private String status;
     
     @Lob
     @Column(name = "image_url", columnDefinition = "LONGTEXT")
