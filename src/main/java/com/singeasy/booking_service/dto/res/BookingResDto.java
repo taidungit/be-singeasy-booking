@@ -2,6 +2,7 @@ package com.singeasy.booking_service.dto.res;
 
 import lombok.Data;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 import com.singeasy.booking_service.enums.BookingStatusEnum;
@@ -24,4 +25,8 @@ public class BookingResDto {
     // Basic User info
     private String userName;
     private String userEmail;
+
+    private String shopName;
+    private Long shopId;
+    private LocalDateTime createdAt;
 }

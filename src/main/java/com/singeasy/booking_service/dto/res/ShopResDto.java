@@ -21,5 +21,6 @@ public class ShopResDto {
 
     private List<String> amenities;
     private List<String> labels;
+    private List<ReviewResDto> reviews;
     
 }

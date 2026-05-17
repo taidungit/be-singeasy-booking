@@ -4,6 +4,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import com.singeasy.booking_service.enums.RoleEnum;
 import com.singeasy.booking_service.util.SecurityUtil;
@@ -51,6 +52,9 @@ public class User {
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
     private List<Booking> bookings;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Review> reviews = new ArrayList<>();
     
     @Column(columnDefinition = "MEDIUMTEXT")
     private String refreshToken;
