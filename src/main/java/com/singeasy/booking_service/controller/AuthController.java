@@ -175,7 +175,7 @@ public class AuthController {
          user.setPassword(hashPassword);
          User createdUser=this.userService.createUser(user);
 
-         return ResponseEntity.status(HttpStatus.CREATED).body(this.userService.convertResCreateUserDTO(createdUser));
+         return ResponseEntity.status(HttpStatus.CREATED).body(this.userService.convertToResDto(createdUser));
     }
 }
 

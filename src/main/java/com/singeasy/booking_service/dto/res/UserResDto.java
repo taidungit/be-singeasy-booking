@@ -1,6 +1,7 @@
 package com.singeasy.booking_service.dto.res;
 
 import com.singeasy.booking_service.enums.RoleEnum;
+
 import lombok.Data;
 
 @Data
@@ -11,5 +12,4 @@ public class UserResDto {
     private String avatar;
     private String phoneNumber;
     private RoleEnum role;
-    // Sau này có thể thêm List<BookingResDto> bookings ở đây
 }

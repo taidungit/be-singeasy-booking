@@ -1,8 +1,12 @@
 package com.singeasy.booking_service.controller;
 
+import com.singeasy.booking_service.dto.req.UpdateProfileReqDto;
 import com.singeasy.booking_service.dto.req.UserReqDto;
 import com.singeasy.booking_service.dto.res.UserResDto;
 import com.singeasy.booking_service.service.UserService;
+import com.singeasy.booking_service.util.SecurityUtil;
+
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -39,5 +43,14 @@ public class UserController {
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @PutMapping("/profile")
+    public ResponseEntity<UserResDto> updateProfile(@Valid @RequestBody UpdateProfileReqDto dto) {
+        String email = SecurityUtil.getCurrentUserLogin()
+                .orElseThrow(() -> new RuntimeException("Unauthorized: Please log in"));
+
+        UserResDto updatedUser = userService.updateProfile(email, dto);
+        return ResponseEntity.ok(updatedUser);
     }
 }
