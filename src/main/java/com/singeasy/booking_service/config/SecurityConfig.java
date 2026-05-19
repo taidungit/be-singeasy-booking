@@ -1,6 +1,5 @@
 package com.singeasy.booking_service.config;
 
-
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -20,6 +19,11 @@ import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
 
 import com.nimbusds.jose.jwk.source.ImmutableSecret;
 import com.nimbusds.jose.util.Base64;
@@ -39,16 +43,41 @@ public class SecurityConfig {
                 };
 
         http
-            .csrf(c->c.disable())
-            .cors(Customizer.withDefaults())
+            .csrf(c -> c.disable())
+            .cors(Customizer.withDefaults()) // Tự động áp dụng @Bean corsConfigurationSource ở dưới
             .authorizeHttpRequests(authz -> authz
                 .requestMatchers(whiteList).permitAll()
                 .anyRequest().authenticated())
-            // Điểm khác biệt: Sử dụng Resource Server chuẩn của Spring
             .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         return http.build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        
+        // Cấu hình các domain được phép gọi tới Backend của bạn
+        configuration.setAllowedOrigins(Arrays.asList(
+            "http://localhost:3000",             // Môi trường dev local React thông thường
+            "http://localhost:5173",             // Môi trường dev local Vite
+            "https://singeasy-booking.vercel.app" // Domain production chạy thực tế trên Vercel
+        ));
+        
+        // Cho phép toàn bộ các phương thức HTTP cơ bản
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        
+        // Cho phép nhận mọi Header được truyền từ Frontend lên (bao gồm cả Authorization Token)
+        configuration.setAllowedHeaders(Arrays.asList("*"));
+        
+        // Cho phép truyền nhận Cookie, Session và Token giữa Frontend và Backend ổn định
+        configuration.setAllowCredentials(true);
+        
+        // Map cấu hình CORS này vào toàn bộ các endpoint của hệ thống
+        UrlBasedCorsConfigurationSource finalSource = new UrlBasedCorsConfigurationSource();
+        finalSource.registerCorsConfiguration("/**", configuration);
+        return finalSource;
     }
 
     @Bean
@@ -67,7 +96,6 @@ public class SecurityConfig {
         return jwtAuthenticationConverter;
     }
 
-
     @Bean
     public JwtDecoder jwtDecoder() {
         NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withSecretKey(
@@ -82,15 +110,13 @@ public class SecurityConfig {
         };
     }
 
-
     @Bean
     public JwtEncoder jwtEncoder() {
         return new NimbusJwtEncoder(new ImmutableSecret<>(getSecretKey()));
-    
     }
+
     private SecretKey getSecretKey() {
         byte[] keyBytes = Base64.from(jwtKey).decode();
         return new SecretKeySpec(keyBytes, 0, keyBytes.length, SecurityUtil.JWT_ALGORITHM.getName());
-  }
-
+    }
 }
