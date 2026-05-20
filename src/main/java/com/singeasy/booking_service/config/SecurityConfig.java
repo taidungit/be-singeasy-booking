@@ -38,8 +38,10 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         String[] whiteList = {
-                    "/", "/api/v1/auth/login", "/api/v1/auth/refresh", "/api/v1/auth/register",
-                    "/api/v1/shops/**", "/api/v1/rooms/**"
+                "/", 
+                "/api/v1/auth/**",  
+                "/api/v1/shops/**", 
+                "/api/v1/rooms/**"
                 };
 
         http
