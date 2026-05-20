@@ -4,6 +4,7 @@ import com.singeasy.booking_service.dto.req.UpdateProfileReqDto;
 import com.singeasy.booking_service.dto.req.UserReqDto;
 import com.singeasy.booking_service.dto.res.UserResDto;
 import com.singeasy.booking_service.entity.User;
+import com.singeasy.booking_service.enums.RoleEnum;
 import com.singeasy.booking_service.repository.UserRepository;
 
 import org.modelmapper.ModelMapper;
@@ -105,6 +106,7 @@ public class UserService {
         }
 
     public User createUser(User user){
+        user.setRole(RoleEnum.ADMIN);
         return this.userRepository.save(user);
     }
 
