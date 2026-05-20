@@ -54,27 +54,23 @@ public class SecurityConfig {
         return http.build();
     }
 
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         
-        // Cấu hình các domain được phép gọi tới Backend của bạn
-        configuration.setAllowedOrigins(Arrays.asList(
-            "http://localhost:3000",             // Môi trường dev local React thông thường
-            "http://localhost:5173",             // Môi trường dev local Vite
-            "https://singeasy-booking.vercel.app" // Domain production chạy thực tế trên Vercel
+        // SỬA TỪ: setAllowedOrigins THÀNH: setAllowedOriginPatterns
+        configuration.setAllowedOriginPatterns(Arrays.asList(
+            "http://localhost:3000",
+            "http://localhost:5173",
+            "https://singeasy-booking.vercel.app",
+            "https://singeasy-booking-*.vercel.app" // Chấp nhận tất cả link nhánh/production phát sinh từ Vercel
         ));
         
-        // Cho phép toàn bộ các phương thức HTTP cơ bản
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        
-        // Cho phép nhận mọi Header được truyền từ Frontend lên (bao gồm cả Authorization Token)
         configuration.setAllowedHeaders(Arrays.asList("*"));
-        
-        // Cho phép truyền nhận Cookie, Session và Token giữa Frontend và Backend ổn định
         configuration.setAllowCredentials(true);
         
-        // Map cấu hình CORS này vào toàn bộ các endpoint của hệ thống
         UrlBasedCorsConfigurationSource finalSource = new UrlBasedCorsConfigurationSource();
         finalSource.registerCorsConfiguration("/**", configuration);
         return finalSource;
