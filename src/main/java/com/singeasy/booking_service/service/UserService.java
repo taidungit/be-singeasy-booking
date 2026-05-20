@@ -49,21 +49,37 @@ public class UserService {
         return modelMapper.map(userRepository.save(user), UserResDto.class);
     }
 
-    @Transactional
-    public UserResDto updateUser(Long id, UserReqDto dto) {
-        User existingUser = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-        
-        // Cập nhật thông tin từ DTO vào Entity hiện tại
-        modelMapper.map(dto, existingUser);
-        dto.setRole(dto.getRole());
-        // Nếu có thay đổi password thì phải mã hóa lại
-        if (dto.getPassword() != null && !dto.getPassword().isEmpty()) {
-            existingUser.setPassword(passwordEncoder.encode(dto.getPassword()));
+@Transactional
+public UserResDto updateUser(Long id, UserReqDto dto) {
+    // 1. Tìm user cũ trong DB
+    User existingUser = userRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+    
+    // 2. LOGIC CHECK EMAIL (Quan trọng): Tránh bị lỗi "Email already exists"
+    if (dto.getEmail() != null && !dto.getEmail().equals(existingUser.getEmail())) {
+        boolean emailExists = userRepository.existsByEmail(dto.getEmail());
+        if (emailExists) {
+            throw new RuntimeException("Email already exists");
         }
-
-        return modelMapper.map(userRepository.save(existingUser), UserResDto.class);
+        existingUser.setEmail(dto.getEmail());
     }
+
+    // 3. Cập nhật các thông tin cơ bản khác bằng tay (An toàn hơn ModelMapper rất nhiều)
+    if (dto.getName() != null) existingUser.setName(dto.getName());
+    if (dto.getPhoneNumber() != null) existingUser.setPhoneNumber(dto.getPhoneNumber());
+    if (dto.getAvatar() != null) existingUser.setAvatar(dto.getAvatar());
+    if (dto.getRole() != null) existingUser.setRole(dto.getRole());
+
+    // 4. Nếu có thay đổi password thì phải mã hóa lại
+    if (dto.getPassword() != null && !dto.getPassword().trim().isEmpty()) {
+        existingUser.setPassword(passwordEncoder.encode(dto.getPassword()));
+    }
+
+    // 5. Lưu lại
+    User savedUser = userRepository.save(existingUser);
+    
+    return modelMapper.map(savedUser, UserResDto.class);
+}
 
 
     @Transactional

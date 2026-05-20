@@ -3,9 +3,7 @@ package com.singeasy.booking_service.service;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
-
 import org.springframework.stereotype.Service;
-
 import com.singeasy.booking_service.dto.req.BookingReqDto;
 import com.singeasy.booking_service.dto.res.BookingResDto;
 import com.singeasy.booking_service.entity.Booking;
@@ -171,4 +169,42 @@ private BookingResDto convertToResDto(Booking booking) {
         Booking updatedBooking = bookingRepository.save(booking);
         return convertToResDto(updatedBooking);
     }
+
+
+public List<BookingResDto> getBookingsByShopId(Long shopId) {
+    // 1. Gọi hàm từ Repository
+    List<Booking> bookings = bookingRepository.findByRoomByShopId(shopId);
+    
+    // 2. Map thủ công bằng tay (Không qua ModelMapper để triệt tiêu lỗi 100%)
+    return bookings.stream()
+            .map(booking -> {
+                BookingResDto dto = new BookingResDto();
+                dto.setId(booking.getId());
+                dto.setBookingDate(booking.getBookingDate());
+                dto.setStartTime(booking.getStartTime());
+                dto.setDuration(booking.getDuration());
+                dto.setTotalAmount(booking.getTotalAmount());
+                dto.setStatus(booking.getStatus());
+                dto.setCreatedAt(booking.getCreatedAt());
+                dto.setServiceFee(booking.getServiceFee());
+                dto.setPricePerHour(booking.getPricePerHour());
+                if (booking.getUser() != null) {
+                    dto.setUserName(booking.getUser().getName());
+                    dto.setUserEmail(booking.getUser().getEmail());
+                } else {
+                    dto.setUserName("Guest User");
+                    dto.setUserEmail("Unknown Email");
+                }
+                if (booking.getRoom() != null) {
+                    dto.setRoomId(booking.getRoom().getId());
+                    dto.setRoomName(booking.getRoom().getName());
+                    if (booking.getRoom().getShop() != null) {
+                        dto.setShopId(booking.getRoom().getShop().getId());
+                        dto.setShopName(booking.getRoom().getShop().getName());
+                    }
+                }
+                return dto;
+            })
+            .collect(Collectors.toList());
+}
 }

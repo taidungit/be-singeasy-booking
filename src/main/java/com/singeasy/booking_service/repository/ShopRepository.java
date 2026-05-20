@@ -16,4 +16,6 @@ public interface ShopRepository extends JpaRepository<KaraokeShop, Long> {
 
     // Tìm một shop cụ thể theo ID và phải chưa bị xóa
     Optional<KaraokeShop> findByIdAndStatusNot(Long id, ShopStatus status);
+
+
 }
