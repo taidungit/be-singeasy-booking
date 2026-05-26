@@ -36,67 +36,87 @@ public class BookingService {
         this.userRepository = userRepository;
     }
 
-@Transactional
-public BookingResDto createBooking(BookingReqDto dto) { // Bỏ tham số User currentUser cũ
-    Room room = roomRepository.findById(dto.getRoomId())
+    @Transactional
+    public BookingResDto createBooking(BookingReqDto dto) {
+Room room = roomRepository.findById(dto.getRoomId())
             .orElseThrow(() -> new RuntimeException("Room not found"));
-            
-    if (!room.getStatus().equals(RoomStatus.AVAILABLE.name())) {
-        throw new RuntimeException("Room is not available");
+                
+    if (room.getStatus().equals(RoomStatus.DELETED.name())) {
+        throw new RuntimeException("Phòng này hiện không còn hoạt động.");
     }
 
-    Booking booking = new Booking();
-    booking.setBookingDate(dto.getBookingDate());
-    booking.setStartTime(dto.getStartTime());
-    booking.setDuration(dto.getDuration());
-    booking.setServiceFee(dto.getServiceFee());
-    booking.setPricePerHour(room.getPricePerHour());
-    
-    double total = (room.getPricePerHour() * dto.getDuration()) + dto.getServiceFee();
-    booking.setTotalAmount(total);
-    booking.setCreatedAt(LocalDateTime.now());
-    booking.setStatus(BookingStatusEnum.PENDING); // Mặc định là PENDING khi tạo mới
-    booking.setRoom(room);
+    // 🟢 CHUYỂN SANG DÙNG LOCALDATETIME ĐỂ KHÔNG BỊ LỖI QUA ĐÊM (00:00)
+    LocalDateTime newStartDT = LocalDateTime.of(dto.getBookingDate(), dto.getStartTime());
+    LocalDateTime newEndDT = newStartDT.plusHours(dto.getDuration());
 
-    String email = SecurityUtil.getCurrentUserLogin()
-            .orElseThrow(() -> new RuntimeException("User not authenticated"));
-            
+    List<Booking> activeBookings = bookingRepository.findActiveBookingsByRoomAndDate(room.getId(), dto.getBookingDate());
 
-    User user = userRepository.findByEmail(email)
-            .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
-            
-    booking.setUser(user); // Gán User thật tìm được vào đây!
+    for (Booking oldBooking : activeBookings) {
+        LocalDateTime oldStartDT = LocalDateTime.of(oldBooking.getBookingDate(), oldBooking.getStartTime());
+        LocalDateTime oldEndDT = oldStartDT.plusHours(oldBooking.getDuration());
 
-
-    if (room.getShop() != null) {
-        booking.setShopId(room.getShop().getId());
-        booking.setShopName(room.getShop().getName());
+        // Kiểm tra overlap bằng cả ngày lẫn giờ: NewStart < OldEnd VÀ NewEnd > OldStart
+        if (newStartDT.isBefore(oldEndDT) && newEndDT.isAfter(oldStartDT)) {
+            throw new RuntimeException("Khung giờ này đã có người đặt trước!");
+        }
     }
-    booking.setRoomName(room.getName());
 
-    booking.setCreatedAt(java.time.LocalDateTime.now());
+        Booking booking = new Booking();
+        booking.setBookingDate(dto.getBookingDate());
+        booking.setStartTime(dto.getStartTime());
+        booking.setDuration(dto.getDuration());
+        booking.setServiceFee(dto.getServiceFee());
+        booking.setPricePerHour(room.getPricePerHour());
+        
+        double total = (room.getPricePerHour() * dto.getDuration()) + dto.getServiceFee();
+        booking.setTotalAmount(total);
+        booking.setCreatedAt(LocalDateTime.now());
+        booking.setStatus(BookingStatusEnum.PENDING); // Đơn mới luôn ở trạng thái PENDING
+        booking.setRoom(room);
 
-    room.setStatus(RoomStatus.BOOKED.name());
-    roomRepository.save(room);
+        String email = SecurityUtil.getCurrentUserLogin()
+                .orElseThrow(() -> new RuntimeException("User not authenticated"));
+                
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+                
+        booking.setUser(user); 
 
-    Booking savedBooking = bookingRepository.save(booking);
-    return convertToResDto(savedBooking);
-}
+        if (room.getShop() != null) {
+            booking.setShopId(room.getShop().getId());
+            booking.setShopName(room.getShop().getName());
+        }
+        booking.setRoomName(room.getName());
+        Booking savedBooking = bookingRepository.save(booking);
+        return convertToResDto(savedBooking);
+    }
 
     @Transactional
     public BookingResDto cancelBooking(Long bookingId) {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new RuntimeException("Booking not found"));
 
-        // 1. Update Booking status to CANCELLED
+        // Chuyển trạng thái đơn về CANCELLED để giải phóng các slot giờ khi truy vấn
         booking.setStatus(BookingStatusEnum.CANCELLED);
 
-        // 2. Release the room back to AVAILABLE
-        Room room = booking.getRoom();
-        room.setStatus(RoomStatus.AVAILABLE.name());
-        roomRepository.save(room);
+        // ❌ ĐÃ XÓA: Không gọi room.setStatus(RoomStatus.AVAILABLE) gây xung đột trạng thái tĩnh.
 
         return convertToResDto(bookingRepository.save(booking));
+    }
+
+    // 🌟 Xử lý duyệt đơn PENDING -> CONFIRMED
+    @Transactional
+    public BookingResDto approveBooking(Long id) {
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Booking reservation not found"));
+
+        // Chuyển trạng thái đơn thành CONFIRMED để chốt lịch
+        booking.setStatus(BookingStatusEnum.CONFIRMED);
+        
+        // ❌ ĐÃ XÓA: Bỏ hoàn toàn việc gán cứng trạng thái Room tại đây để né bẫy logic khóa phòng.
+
+        Booking updatedBooking = bookingRepository.save(booking);
+        return convertToResDto(updatedBooking);
     }
 
     public List<BookingResDto> getUserHistory(Long userId) {
@@ -106,49 +126,6 @@ public BookingResDto createBooking(BookingReqDto dto) { // Bỏ tham số User c
                 .collect(Collectors.toList());
     }
 
-private BookingResDto convertToResDto(Booking booking) {
-    if (booking == null) {
-        return null;
-    }
-
-    BookingResDto res = new BookingResDto();
-    
-    // 1. Map các trường dữ liệu nguyên bản từ bảng Booking
-    res.setId(booking.getId());
-    res.setBookingDate(booking.getBookingDate());
-    res.setStartTime(booking.getStartTime());
-    res.setDuration(booking.getDuration());
-    res.setPricePerHour(booking.getPricePerHour());
-    res.setServiceFee(booking.getServiceFee());
-    res.setTotalAmount(booking.getTotalAmount());
-    res.setStatus(booking.getStatus());
-    res.setCreatedAt(booking.getCreatedAt()); // Sửa dứt điểm lỗi Invalid Date FE
-    
-    // 2. Map các trường tĩnh được lưu trực tiếp trong Booking
-    res.setShopId(booking.getShopId());
-    res.setShopName(booking.getShopName());
-    res.setRoomName(booking.getRoomName()); // Khớp chuẩn trường tĩnh né lỗi xung đột
-
-    // 3. Bốc thêm thông tin liên kết từ bảng Room (Nếu có liên kết thực thể)
-    if (booking.getRoom() != null) {
-        res.setRoomId(booking.getRoom().getId());
-        // Nếu trường roomName tĩnh ở trên bị null, ta lấy fallback từ thực thể liên kết sang
-        if (res.getRoomName() == null) {
-            res.setRoomName(booking.getRoom().getName());
-        }
-    }
-    
-    // 4. Bốc thêm thông tin liên kết từ bảng User để đổ ra hóa đơn
-    if (booking.getUser() != null) {
-        res.setUserName(booking.getUser().getName());
-        res.setUserEmail(booking.getUser().getEmail());
-    }
-
-    return res;
-}
-
-
-
     @Transactional
     public List<BookingResDto> getAllBookings() {
         return bookingRepository.findAll().stream()
@@ -156,77 +133,89 @@ private BookingResDto convertToResDto(Booking booking) {
                 .collect(Collectors.toList());
     }
 
-    // 🌟 Xử lý duyệt đơn PENDING -> CONFIRMED
-    @Transactional
-    public BookingResDto approveBooking(Long id) {
-        Booking booking = bookingRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Booking reservation not found"));
-
-        // Chuyển trạng thái đơn thành CONFIRMED
-        booking.setStatus(BookingStatusEnum.CONFIRMED);
+    public List<BookingResDto> getBookingsByShopId(Long shopId) {
+        List<Booking> bookings = bookingRepository.findByRoomByShopId(shopId);
         
-        if (booking.getRoom() != null) {
-            Room room = booking.getRoom();
-            room.setStatus(RoomStatus.BOOKED.name());
-            roomRepository.save(room);
-        }
-
-        Booking updatedBooking = bookingRepository.save(booking);
-        return convertToResDto(updatedBooking);
+        return bookings.stream()
+                .map(booking -> {
+                    BookingResDto dto = new BookingResDto();
+                    dto.setId(booking.getId());
+                    dto.setBookingDate(booking.getBookingDate());
+                    dto.setStartTime(booking.getStartTime());
+                    dto.setDuration(booking.getDuration());
+                    dto.setTotalAmount(booking.getTotalAmount());
+                    dto.setStatus(booking.getStatus());
+                    dto.setCreatedAt(booking.getCreatedAt());
+                    dto.setServiceFee(booking.getServiceFee());
+                    dto.setPricePerHour(booking.getPricePerHour());
+                    if (booking.getUser() != null) {
+                        dto.setUserName(booking.getUser().getName());
+                        dto.setUserEmail(booking.getUser().getEmail());
+                    } else {
+                        dto.setUserName("Guest User");
+                        dto.setUserEmail("Unknown Email");
+                    }
+                    if (booking.getRoom() != null) {
+                        dto.setRoomId(booking.getRoom().getId());
+                        dto.setRoomName(booking.getRoom().getName());
+                        if (booking.getRoom().getShop() != null) {
+                            dto.setShopId(booking.getRoom().getShop().getId());
+                            dto.setShopName(booking.getRoom().getShop().getName());
+                        }
+                    }
+                    return dto;
+                })
+                .collect(Collectors.toList());
     }
 
+    public List<OccupiedSlotDto> getOccupiedSlots(Long roomId, LocalDate date) {
+        List<Booking> activeBookings = bookingRepository.findActiveBookingsByRoomAndDate(roomId, date);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
 
-public List<BookingResDto> getBookingsByShopId(Long shopId) {
-    // 1. Gọi hàm từ Repository
-    List<Booking> bookings = bookingRepository.findByRoomByShopId(shopId);
-    
-    // 2. Map thủ công bằng tay (Không qua ModelMapper để triệt tiêu lỗi 100%)
-    return bookings.stream()
-            .map(booking -> {
-                BookingResDto dto = new BookingResDto();
-                dto.setId(booking.getId());
-                dto.setBookingDate(booking.getBookingDate());
-                dto.setStartTime(booking.getStartTime());
-                dto.setDuration(booking.getDuration());
-                dto.setTotalAmount(booking.getTotalAmount());
-                dto.setStatus(booking.getStatus());
-                dto.setCreatedAt(booking.getCreatedAt());
-                dto.setServiceFee(booking.getServiceFee());
-                dto.setPricePerHour(booking.getPricePerHour());
-                if (booking.getUser() != null) {
-                    dto.setUserName(booking.getUser().getName());
-                    dto.setUserEmail(booking.getUser().getEmail());
-                } else {
-                    dto.setUserName("Guest User");
-                    dto.setUserEmail("Unknown Email");
-                }
-                if (booking.getRoom() != null) {
-                    dto.setRoomId(booking.getRoom().getId());
-                    dto.setRoomName(booking.getRoom().getName());
-                    if (booking.getRoom().getShop() != null) {
-                        dto.setShopId(booking.getRoom().getShop().getId());
-                        dto.setShopName(booking.getRoom().getShop().getName());
-                    }
-                }
-                return dto;
-            })
-            .collect(Collectors.toList());
-}
+        return activeBookings.stream().map(booking -> {
+            LocalTime start = booking.getStartTime();
+            LocalTime end = start.plusHours(booking.getDuration());
+            
+            return new OccupiedSlotDto(
+                start.format(formatter),
+                end.format(formatter)
+            );
+        }).toList();
+    }
 
+    private BookingResDto convertToResDto(Booking booking) {
+        if (booking == null) {
+            return null;
+        }
 
-public List<OccupiedSlotDto> getOccupiedSlots(Long roomId, LocalDate date) {
-    List<Booking> activeBookings = bookingRepository.findActiveBookingsByRoomAndDate(roomId, date);
-    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
-
-    return activeBookings.stream().map(booking -> {
-        LocalTime start = booking.getStartTime();
-        // Tính toán giờ kết thúc bằng cách lấy giờ bắt đầu cộng thời lượng đặt phòng
-        LocalTime end = start.plusHours(booking.getDuration());
+        BookingResDto res = new BookingResDto();
         
-        return new OccupiedSlotDto(
-            start.format(formatter),
-            end.format(formatter)
-        );
-    }).toList();
-}
+        res.setId(booking.getId());
+        res.setBookingDate(booking.getBookingDate());
+        res.setStartTime(booking.getStartTime());
+        res.setDuration(booking.getDuration());
+        res.setPricePerHour(booking.getPricePerHour());
+        res.setServiceFee(booking.getServiceFee());
+        res.setTotalAmount(booking.getTotalAmount());
+        res.setStatus(booking.getStatus());
+        res.setCreatedAt(booking.getCreatedAt()); 
+        
+        res.setShopId(booking.getShopId());
+        res.setShopName(booking.getShopName());
+        res.setRoomName(booking.getRoomName()); 
+
+        if (booking.getRoom() != null) {
+            res.setRoomId(booking.getRoom().getId());
+            if (res.getRoomName() == null) {
+                res.setRoomName(booking.getRoom().getName());
+            }
+        }
+        
+        if (booking.getUser() != null) {
+            res.setUserName(booking.getUser().getName());
+            res.setUserEmail(booking.getUser().getEmail());
+        }
+
+        return res;
+    }
 }

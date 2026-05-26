@@ -1,6 +1,8 @@
 package com.singeasy.booking_service.controller;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
@@ -10,13 +12,13 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-
 import com.singeasy.booking_service.dto.OccupiedSlotDto;
 import com.singeasy.booking_service.dto.req.BookingReqDto;
 import com.singeasy.booking_service.dto.res.BookingResDto;
+import com.singeasy.booking_service.entity.Booking;
 import com.singeasy.booking_service.entity.User;
+import com.singeasy.booking_service.repository.BookingRepository;
 import com.singeasy.booking_service.service.BookingService;
 import com.singeasy.booking_service.service.UserService;
 import com.singeasy.booking_service.util.SecurityUtil;
@@ -29,6 +31,7 @@ public class BookingController {
 
     private final BookingService bookingService;
     private final UserService userService;
+    private final BookingRepository bookingRepository;
 
     @PostMapping
     public ResponseEntity<BookingResDto> create(@RequestBody BookingReqDto request) {
@@ -70,14 +73,26 @@ public class BookingController {
     }
 
     @GetMapping("/occupied-slots")
-    public ResponseEntity<List<OccupiedSlotDto>> getOccupiedSlots(
-            @RequestParam Long roomId,
-            @RequestParam String date) {
+    public List<OccupiedSlotDto> getOccupiedSlots(Long roomId, LocalDate date) {
+    List<Booking> activeBookings = bookingRepository.findActiveBookingsByRoomAndDate(roomId, date);
+    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
+
+    return activeBookings.stream().map(booking -> {
+        LocalDateTime startDT = LocalDateTime.of(booking.getBookingDate(), booking.getStartTime());
+        LocalDateTime endDT = startDT.plusHours(booking.getDuration());
         
-        // Chuyển chuỗi định dạng YYYY-MM-DD từ FE thành đối tượng LocalDate
-        LocalDate bookingDate = LocalDate.parse(date);
-        List<OccupiedSlotDto> slots = bookingService.getOccupiedSlots(roomId, bookingDate);
+        String startTimeStr = startDT.format(formatter);
+        String endTimeStr;
         
-        return ResponseEntity.ok(slots);
-    }
+        // 🟢 NẾU GIỜ KẾT THÚC SANG NGÀY HÔM SAU (Ví dụ: 00:00 hoặc 01:00 sáng)
+        if (endDT.toLocalDate().isAfter(date)) {
+            // Ép chuỗi hiển thị thành "24:00" hoặc mốc kịch khung để Frontend hiểu là khóa đến hết đêm
+            endTimeStr = "24:00"; 
+        } else {
+            endTimeStr = endDT.format(formatter);
+        }
+        
+        return new OccupiedSlotDto(startTimeStr, endTimeStr);
+    }).toList();
+}
 }
