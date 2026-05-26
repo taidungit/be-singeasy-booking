@@ -25,4 +25,12 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     // Lấy 5 đơn đặt phòng mới nhất để làm Hoạt động gần đây
     List<Booking> findTop5ByOrderByCreatedAtDesc();
 
+    @Query("SELECT b FROM Booking b WHERE b.room.id = :roomId " +
+       "AND b.bookingDate = :date " +
+       "AND b.status != com.singeasy.booking_service.enums.BookingStatusEnum.CANCELLED")
+    List<Booking> findActiveBookingsByRoomAndDate(
+        @Param("roomId") Long roomId, 
+        @Param("date") LocalDate date
+);
+
 }

@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import com.singeasy.booking_service.dto.req.ShopReqDto;
 import com.singeasy.booking_service.dto.res.ShopResDto;
@@ -27,6 +28,17 @@ public class ShopController {
     @GetMapping
     public ResponseEntity<List<ShopResDto>> getAllShops() {
         return ResponseEntity.ok(shopService.findShops());
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<ShopResDto>> searchShops(
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String address,
+            @RequestParam(required = false) Double minRating,
+            @RequestParam(required = false) Integer minPrice,
+            @RequestParam(required = false) Integer maxPrice) {
+            
+        return ResponseEntity.ok(shopService.filterShops(name, address, minRating, minPrice, maxPrice));
     }
 
     @GetMapping("/{id}")

@@ -121,4 +121,18 @@ public ShopResDto updateShop(Long id, ShopReqDto dto) {
         
         return res;
     }
+
+    public List<String> getDistinctCities() {
+        return shopRepository.findDistinctCities();
+    }
+
+    public List<ShopResDto> filterShops(String name, String address, Double minRating, Integer minPrice, Integer maxPrice) {
+        // Xử lý chuẩn hóa từ 'all' của Frontend thành null để câu SQL Native bỏ qua điều kiện lọc địa chỉ
+        String filterAddress = (address != null && address.equalsIgnoreCase("all")) ? null : address;
+
+        return shopRepository.findFilteredShopsNative(name, filterAddress, minRating, minPrice, maxPrice)
+                .stream()
+                .map(this::convertToResDto)
+                .toList();
+    }
 }

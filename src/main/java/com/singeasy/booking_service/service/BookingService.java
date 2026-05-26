@@ -1,9 +1,14 @@
 package com.singeasy.booking_service.service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
+
+import com.singeasy.booking_service.dto.OccupiedSlotDto;
 import com.singeasy.booking_service.dto.req.BookingReqDto;
 import com.singeasy.booking_service.dto.res.BookingResDto;
 import com.singeasy.booking_service.entity.Booking;
@@ -206,5 +211,22 @@ public List<BookingResDto> getBookingsByShopId(Long shopId) {
                 return dto;
             })
             .collect(Collectors.toList());
+}
+
+
+public List<OccupiedSlotDto> getOccupiedSlots(Long roomId, LocalDate date) {
+    List<Booking> activeBookings = bookingRepository.findActiveBookingsByRoomAndDate(roomId, date);
+    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
+
+    return activeBookings.stream().map(booking -> {
+        LocalTime start = booking.getStartTime();
+        // Tính toán giờ kết thúc bằng cách lấy giờ bắt đầu cộng thời lượng đặt phòng
+        LocalTime end = start.plusHours(booking.getDuration());
+        
+        return new OccupiedSlotDto(
+            start.format(formatter),
+            end.format(formatter)
+        );
+    }).toList();
 }
 }

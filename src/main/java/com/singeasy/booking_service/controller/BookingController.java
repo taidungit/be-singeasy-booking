@@ -1,5 +1,6 @@
 package com.singeasy.booking_service.controller;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
@@ -9,7 +10,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.singeasy.booking_service.dto.OccupiedSlotDto;
 import com.singeasy.booking_service.dto.req.BookingReqDto;
 import com.singeasy.booking_service.dto.res.BookingResDto;
 import com.singeasy.booking_service.entity.User;
@@ -65,5 +69,15 @@ public class BookingController {
         return ResponseEntity.ok(bookingService.approveBooking(id));
     }
 
-
+    @GetMapping("/occupied-slots")
+    public ResponseEntity<List<OccupiedSlotDto>> getOccupiedSlots(
+            @RequestParam Long roomId,
+            @RequestParam String date) {
+        
+        // Chuyển chuỗi định dạng YYYY-MM-DD từ FE thành đối tượng LocalDate
+        LocalDate bookingDate = LocalDate.parse(date);
+        List<OccupiedSlotDto> slots = bookingService.getOccupiedSlots(roomId, bookingDate);
+        
+        return ResponseEntity.ok(slots);
+    }
 }

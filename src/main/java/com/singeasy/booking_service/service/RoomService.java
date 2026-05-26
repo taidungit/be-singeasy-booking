@@ -7,6 +7,7 @@ import com.singeasy.booking_service.entity.KaraokeShop;
 import com.singeasy.booking_service.entity.Room;
 import com.singeasy.booking_service.enums.RoomStatus;
 import com.singeasy.booking_service.repository.AmenityRepository;
+import com.singeasy.booking_service.repository.BookingRepository;
 import com.singeasy.booking_service.repository.RoomRepository;
 import com.singeasy.booking_service.repository.ShopRepository;
 
@@ -23,12 +24,14 @@ public class RoomService {
     private final ShopRepository shopRepository;
     private final ModelMapper modelMapper;
     private final AmenityRepository amenityRepository;
+    private final BookingRepository bookingRepository;
 
-    public RoomService(RoomRepository roomRepository, ShopRepository shopRepository, ModelMapper modelMapper, AmenityRepository amenityRepository) {
+    public RoomService(RoomRepository roomRepository, ShopRepository shopRepository, ModelMapper modelMapper, AmenityRepository amenityRepository, BookingRepository bookingRepository) {
         this.roomRepository = roomRepository;
         this.shopRepository = shopRepository;
         this.modelMapper = modelMapper;
         this.amenityRepository = amenityRepository;
+        this.bookingRepository = bookingRepository;
     }
 
     @Transactional
@@ -103,20 +106,44 @@ public class RoomService {
     }
 
     // Hàm bổ trợ để map thủ công các trường Shop
-    private RoomResDto convertToResDto(Room room) {
-        RoomResDto dto = new RoomResDto();
-        dto.setId(room.getId());
-        dto.setName(room.getName());
-        dto.setCapacity(room.getCapacity());
-        dto.setPricePerHour(room.getPricePerHour());
-        dto.setImageUrl(room.getImageUrl());
-        dto.setStatus(room.getStatus()); 
+   private RoomResDto convertToResDto(Room room) {
+    RoomResDto dto = new RoomResDto();
+    dto.setId(room.getId());
+    dto.setName(room.getName());
+    dto.setCapacity(room.getCapacity());
+    dto.setPricePerHour(room.getPricePerHour());
+    dto.setImageUrl(room.getImageUrl());
+    dto.setStatus(room.getStatus()); 
 
-        List<String> amenityNames = room.getAmenities().stream()
-                .map(Amenity::getName) // Giả sử thực thể Amenity có hàm getName()
-                .toList();
-        dto.setAmenities(amenityNames);
+    List<String> amenityNames = room.getAmenities().stream()
+            .map(Amenity::getName)
+            .toList();
+    dto.setAmenities(amenityNames);
 
-        return dto;
-    }
+    // 🟢 LOGIC TÍNH TOÁN TRẠNG THÁI KÍN LỊCH TRONG NGÀY HÔM NAY
+    java.time.LocalDate today = java.time.LocalDate.now();
+    
+    // Lấy ra tất cả các đơn đặt phòng hợp lệ của phòng này trong ngày hôm nay
+    List<com.singeasy.booking_service.entity.Booking> activeBookings = 
+            bookingRepository.findActiveBookingsByRoomAndDate(room.getId(), today);
+            
+    // Tính tổng số giờ đã bị book (duration)
+    int totalBookedHours = activeBookings.stream()
+            .mapToInt(com.singeasy.booking_service.entity.Booking::getDuration)
+            .sum();
+            
+    // Tổng thời gian hoạt động của một phòng là 12 tiếng (từ 12:00 đến hết block 23:00)
+    // Nếu tổng số giờ đặt >= 12, coi như phòng bận hoàn toàn cả ngày
+    dto.setFullyBooked(totalBookedHours >= 12);
+
+    return dto;
+}
+
+    public List<String> getDistinctRoomCapacities() {
+    List<String> capacities = roomRepository.findDistinctCapacities();
+        if (capacities.isEmpty()) {
+            return List.of("small", "medium", "large");
+        }
+    return capacities;
+}
 }

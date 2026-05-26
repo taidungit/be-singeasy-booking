@@ -14,4 +14,5 @@ private Long id;
     private List<String> amenities;
     private Long shopId; 
     private String shopName; 
+    private boolean isFullyBooked;
 }
