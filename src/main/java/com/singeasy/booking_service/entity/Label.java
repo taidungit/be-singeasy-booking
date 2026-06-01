@@ -19,7 +19,7 @@ public class Label {
 
     private String name;
 
-    @ManyToOne
-    @JoinColumn(name = "shop_id") 
-    private KaraokeShop shop;
+    // @ManyToOne
+    // @JoinColumn(name = "shop_id") 
+    // private KaraokeShop shop;
 }

@@ -11,6 +11,7 @@ import com.singeasy.booking_service.entity.KaraokeShop;
 import com.singeasy.booking_service.entity.Label;
 import com.singeasy.booking_service.enums.ShopStatus;
 import com.singeasy.booking_service.repository.AmenityRepository;
+import com.singeasy.booking_service.repository.LabelRepository;
 import com.singeasy.booking_service.repository.ShopRepository;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -21,11 +22,13 @@ public class ShopService {
     private final ShopRepository shopRepository;
     private final ModelMapper modelMapper;
     private final AmenityRepository amenityRepository;
+    private final LabelRepository labelRepository;
 
-    public ShopService(ShopRepository shopRepository, ModelMapper modelMapper, AmenityRepository amenityRepository) {
+    public ShopService(ShopRepository shopRepository, ModelMapper modelMapper, AmenityRepository amenityRepository, LabelRepository labelRepository) {
         this.shopRepository = shopRepository;
         this.modelMapper = modelMapper;
         this.amenityRepository = amenityRepository;
+        this.labelRepository = labelRepository;
     }
 
     public List<ShopResDto> findShops() {
@@ -46,16 +49,18 @@ public ShopResDto createShop(ShopReqDto dto) {
     // 1. Map cơ bản
     KaraokeShop shop = modelMapper.map(dto, KaraokeShop.class);
     
-    // 2. Xử lý Labels (Nếu có thì mới làm, không thì thôi)
+    // 2. Xử lý Labels (Giống hệt Amenity - Bắt buộc phải có sẵn trong DB)
     if (dto.getLabels() != null && !dto.getLabels().isEmpty()) {
-        shop.setLabels(dto.getLabels().stream().map(name -> {
-            Label label = new Label();
-            label.setName(name);
-            label.setShop(shop);
-            return label;
-        }).toList());
+        List<Label> existingLabels = dto.getLabels().stream()
+            .map(name -> labelRepository.findByName(name)
+                .orElseThrow(() -> new EntityNotFoundException("Label not found: " + name)))
+            .toList();
+        shop.setLabels(existingLabels);
+    } else {
+        shop.setLabels(new ArrayList<>());
     }
-    // 3. Xử lý Amenities (Chỉ xử lý khi dto.getAmenities() có dữ liệu)
+    
+    // 3. Xử lý Amenities
     if (dto.getAmenities() != null && !dto.getAmenities().isEmpty()) {
         List<Amenity> existingAmenities = dto.getAmenities().stream()
             .map(name -> amenityRepository.findByName(name)
@@ -73,27 +78,25 @@ public ShopResDto createShop(ShopReqDto dto) {
 public ShopResDto updateShop(Long id, ShopReqDto dto) {
     KaraokeShop existingShop = shopRepository.findByIdAndStatusNot(id, ShopStatus.DELETED)
             .orElseThrow(() -> new RuntimeException("Shop not found"));
-    // 1. Map các trường cơ bản từ DTO sang Entity hiện tại
+            
     modelMapper.map(dto, existingShop);
-    // 2. Cập nhật Labels (Quan hệ OneToMany - tạo mới/xóa bỏ bình thường)
+    
+    // 2. Cập nhật Labels (Giống hệt Amenity - Chỉ thay đổi liên kết)
     if (dto.getLabels() != null) {
         existingShop.getLabels().clear(); 
         dto.getLabels().forEach(name -> {
-            Label label = new Label();
-            label.setName(name);
-            label.setShop(existingShop);
-            existingShop.getLabels().add(label); 
+            Label label = labelRepository.findByName(name)
+                .orElseThrow(() -> new RuntimeException("Label not found: " + name));
+            existingShop.getLabels().add(label);
         });
     }
-    // 3. Cập nhật Amenities (Quan hệ ManyToMany - Chỉ thay đổi liên kết)
+    
+    // 3. Cập nhật Amenities
     if (dto.getAmenities() != null) {
-        // Xóa các liên kết cũ trong bảng trung gian (shop_amenity)
         existingShop.getAmenities().clear(); 
-        // Tìm các Amenity "cứng" từ DB và thêm vào danh sách liên kết mới
         dto.getAmenities().forEach(name -> {
             Amenity amenity = amenityRepository.findByName(name)
                 .orElseThrow(() -> new RuntimeException("Amenity not found: " + name));
-            // Chỉ thêm liên kết, KHÔNG setShop hay tạo mới Amenity
             existingShop.getAmenities().add(amenity);
         });
     }

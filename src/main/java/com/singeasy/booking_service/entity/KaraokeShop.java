@@ -45,8 +45,13 @@ public class KaraokeShop {
     @Enumerated(EnumType.STRING)
     private ShopStatus status = ShopStatus.ACTIVE;
 
-    @OneToMany(mappedBy = "shop", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Label> labels;
+    @ManyToMany(cascade = {CascadeType.DETACH, CascadeType.MERGE, CascadeType.PERSIST, CascadeType.REFRESH})
+    @JoinTable(
+        name = "shop_label",
+        joinColumns = @JoinColumn(name = "shop_id"),
+        inverseJoinColumns = @JoinColumn(name = "label_id")
+    )
+    private List<Label> labels = new ArrayList<>();
 
     @ManyToMany
     @JoinTable(
