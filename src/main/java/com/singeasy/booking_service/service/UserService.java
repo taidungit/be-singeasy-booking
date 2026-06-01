@@ -122,7 +122,7 @@ public UserResDto updateUser(Long id, UserReqDto dto) {
         }
 
     public User createUser(User user){
-        user.setRole(RoleEnum.ADMIN);
+        user.setRole(RoleEnum.USER); // Mặc định role là USER khi tạo mới
         return this.userRepository.save(user);
     }
 
