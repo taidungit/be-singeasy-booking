@@ -3,7 +3,6 @@ services:
     name: karaoke-mysql-db
     env: docker
     repo: https://github.com/render-examples/mysql
-    dockerfile: Dockerfile
     disk:
       name: mysql-data
       mountPath: /var/lib/mysql
