@@ -4,7 +4,7 @@ WORKDIR /app
 COPY . .
 RUN mvn clean package -DskipTests
 
-# --- Giai đoạn 2: Tạo môi trường chạy chung Ubuntu 24.04 (Chứa cả Java 21 và MySQL) ---
+# --- Giai đoạn 2: Tạo môi trường chạy chung Ubuntu 24.04 ---
 FROM ubuntu:24.04
 
 # Cài đặt MySQL Server và OpenJDK 21 JRE
@@ -17,14 +17,11 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
 
-# Cấu hình khởi chạy MySQL ban đầu và tạo Database
-# (Sử dụng mật khẩu 123456789 và DB karaoke_booking khớp 100% với file local của bạn)
+# Khởi động cấu hình MySQL vượt qua cơ chế socket chứng thực của Ubuntu 24.04
 RUN service mysql start && \
-    mysql -e "ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '123456789';" && \
-    mysql -e "CREATE DATABASE IF NOT EXISTS karaoke_booking;" && \
-    mysql -e "FLUSH PRIVILEGES;"
+    mysql -u root --execute="ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '123456789'; CREATE DATABASE IF NOT EXISTS karaoke_booking; FLUSH PRIVILEGES;"
 
 EXPOSE 8080
 
-# Script khởi động song song cả MySQL Server và ứng dụng Spring Boot
+# Khởi động song song cả MySQL Server và ứng dụng Spring Boot khi container chạy
 CMD service mysql start && java -jar app.jar
