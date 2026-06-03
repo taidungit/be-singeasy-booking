@@ -41,8 +41,9 @@ public class User {
     @Column(nullable = false)
     private String password; 
 
-    @Lob
-    @Column(name = "avatar", columnDefinition = "LONGTEXT")
+    //@Lob
+    // @Column(name = "avatar", columnDefinition = "LONGTEXT")
+    @Column(name = "image_url", columnDefinition = "TEXT")
     private String avatar;
 
     private String phoneNumber;
@@ -56,7 +57,8 @@ public class User {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Review> reviews = new ArrayList<>();
     
-    @Column(columnDefinition = "MEDIUMTEXT")
+    // @Column(columnDefinition = "MEDIUMTEXT")
+    @Column(columnDefinition = "TEXT")
     private String refreshToken;
     private Instant createdAt;
     private Instant updatedAt;

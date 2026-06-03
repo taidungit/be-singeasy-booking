@@ -38,8 +38,9 @@ public class KaraokeShop {
     private Double minPricePerHour;
 
 
-    @Lob // Đánh dấu đây là đối tượng lớn
-    @Column(name = "image_url", columnDefinition = "LONGTEXT")
+   // @Lob // Đánh dấu đây là đối tượng lớn
+    // @Column(name = "image_url", columnDefinition = "LONGTEXT")
+    @Column(name = "image_url", columnDefinition = "TEXT")
     private String imageUrl;
     
     @Enumerated(EnumType.STRING)

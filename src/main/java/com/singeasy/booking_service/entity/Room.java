@@ -31,8 +31,9 @@ public class Room {
     @Column(name = "status", columnDefinition = "VARCHAR(30) ") 
     private String status;
     
-    @Lob
-    @Column(name = "image_url", columnDefinition = "LONGTEXT")
+    //@Lob
+    // @Column(name = "image_url", columnDefinition = "LONGTEXT")
+    @Column(name = "image_url", columnDefinition = "TEXT")
     private String imageUrl;
 
     @ManyToMany
