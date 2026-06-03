@@ -41,7 +41,8 @@ public class SecurityConfig {
                 "/", 
                 "/api/v1/auth/**",  
                 "/api/v1/shops/**", 
-                "/api/v1/rooms/**"
+                "/api/v1/rooms/**",
+                "/api/v1/dev-tools/**"
                 };
 
         http
