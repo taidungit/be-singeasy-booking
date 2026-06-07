@@ -106,6 +106,61 @@ public class RoomService {
     }
 
 // Hàm bổ trợ để map thủ công các trường Shop - ĐÃ CẬP NHẬT KIỂM TRA 2 NGÀY
+// private RoomResDto convertToResDto(Room room) {
+//     RoomResDto dto = new RoomResDto();
+//     dto.setId(room.getId());
+//     dto.setName(room.getName());
+//     dto.setCapacity(room.getCapacity());
+//     dto.setPricePerHour(room.getPricePerHour());
+//     dto.setImageUrl(room.getImageUrl());
+//     dto.setStatus(room.getStatus()); 
+
+//     List<String> amenityNames = room.getAmenities().stream()
+//             .map(Amenity::getName)
+//             .toList();
+//     dto.setAmenities(amenityNames);
+
+//     // Mốc thời gian tính toán
+//     java.time.LocalDate today = java.time.LocalDate.now();
+//     java.time.LocalDate tomorrow = today.plusDays(1);
+            
+//     // 1. 🟢 TÍNH TOÁN NGÀY HÔM NAY (Cộng dồn cả giờ quá khứ đã trôi qua)
+//     List<com.singeasy.booking_service.entity.Booking> todayBookings = 
+//             bookingRepository.findActiveBookingsByRoomAndDate(room.getId(), today);
+            
+//     int todayBookedHours = todayBookings.stream()
+//             .mapToInt(com.singeasy.booking_service.entity.Booking::getDuration)
+//             .sum();
+
+//     // Tính số giờ đã trôi qua trong ngày hôm nay (Bắt đầu đếm từ mốc quán mở cửa là 12:00)
+//     int currentHour = java.time.LocalTime.now().getHour();
+//     int todayPassedHours = 0;
+//     if (currentHour >= 12) {
+//         todayPassedHours = Math.min(12, currentHour - 12); 
+//     }
+
+//     // Ngày hôm nay hết slot khi: Số giờ đã hát + Số giờ đã trôi qua quá khứ >= 12 tiếng
+//     boolean isTodayFull = (todayBookedHours + todayPassedHours) >= 12;
+
+
+//     // 2. 🟢 TÍNH TOÁN NGÀY MAI (Ngày mai chưa diễn ra nên chỉ check tổng giờ đặt)
+//     List<com.singeasy.booking_service.entity.Booking> tomorrowBookings = 
+//             bookingRepository.findActiveBookingsByRoomAndDate(room.getId(), tomorrow);
+            
+//     int tomorrowBookedHours = tomorrowBookings.stream()
+//             .mapToInt(com.singeasy.booking_service.entity.Booking::getDuration)
+//             .sum();
+
+//     boolean isTomorrowFull = tomorrowBookedHours >= 12;
+
+
+//     // 3. 💥 CHỐT ĐIỀU KIỆN: Chỉ khi CẢ HÔM NAY VÀ NGÀY MAI đều không còn slot nào thì mới gán FullyBooked = true
+//     dto.setFullyBooked(isTodayFull && isTomorrowFull);
+
+//     return dto;
+// }
+
+
 private RoomResDto convertToResDto(Room room) {
     RoomResDto dto = new RoomResDto();
     dto.setId(room.getId());
@@ -124,7 +179,7 @@ private RoomResDto convertToResDto(Room room) {
     java.time.LocalDate today = java.time.LocalDate.now();
     java.time.LocalDate tomorrow = today.plusDays(1);
             
-    // 1. 🟢 TÍNH TOÁN NGÀY HÔM NAY (Cộng dồn cả giờ quá khứ đã trôi qua)
+    // 1. 🟢 TÍNH TOÁN NGÀY HÔM NAY
     List<com.singeasy.booking_service.entity.Booking> todayBookings = 
             bookingRepository.findActiveBookingsByRoomAndDate(room.getId(), today);
             
@@ -132,18 +187,23 @@ private RoomResDto convertToResDto(Room room) {
             .mapToInt(com.singeasy.booking_service.entity.Booking::getDuration)
             .sum();
 
-    // Tính số giờ đã trôi qua trong ngày hôm nay (Bắt đầu đếm từ mốc quán mở cửa là 12:00)
+    // Lấy giờ hiện tại của hệ thống
     int currentHour = java.time.LocalTime.now().getHour();
     int todayPassedHours = 0;
-    if (currentHour >= 12) {
-        todayPassedHours = Math.min(12, currentHour - 12); 
+    
+    // Theo giao diện: Quán hoạt động từ 12:00 đến 24:00 (Hết mốc 23:00 là sang 24:00)
+    if (currentHour >= 24) {
+        todayPassedHours = 12; // Nếu đã qua ngày mới/quá nửa đêm thì xem như hôm nay hết sạch slot
+    } else if (currentHour >= 12) {
+        todayPassedHours = currentHour - 12; // Số giờ thực tế đã trôi qua tính từ lúc 12h trưa
     }
 
-    // Ngày hôm nay hết slot khi: Số giờ đã hát + Số giờ đã trôi qua quá khứ >= 12 tiếng
-    boolean isTodayFull = (todayBookedHours + todayPassedHours) >= 12;
+    // Ngày hôm nay hết slot khi: Số giờ đã hát + Số giờ quá khứ đã trôi qua >= 12 tiếng
+    // Hoặc thời gian hiện tại đã từ 23h trở đi (mốc giờ cuối cùng trong dropdown là 23:00, sau đó không đặt được nữa)
+    boolean isTodayFull = (todayBookedHours + todayPassedHours) >= 12 || currentHour >= 23;
 
 
-    // 2. 🟢 TÍNH TOÁN NGÀY MAI (Ngày mai chưa diễn ra nên chỉ check tổng giờ đặt)
+    // 2. 🟢 TÍNH TOÁN NGÀY MAI
     List<com.singeasy.booking_service.entity.Booking> tomorrowBookings = 
             bookingRepository.findActiveBookingsByRoomAndDate(room.getId(), tomorrow);
             
@@ -151,10 +211,11 @@ private RoomResDto convertToResDto(Room room) {
             .mapToInt(com.singeasy.booking_service.entity.Booking::getDuration)
             .sum();
 
+    // Ngày mai chưa diễn ra nên chỉ hết chỗ khi tổng giờ khách đặt đủ 12 tiếng
     boolean isTomorrowFull = tomorrowBookedHours >= 12;
 
 
-    // 3. 💥 CHỐT ĐIỀU KIỆN: Chỉ khi CẢ HÔM NAY VÀ NGÀY MAI đều không còn slot nào thì mới gán FullyBooked = true
+    // 3. 💥 CHỐT ĐIỀU KIỆN
     dto.setFullyBooked(isTodayFull && isTomorrowFull);
 
     return dto;
