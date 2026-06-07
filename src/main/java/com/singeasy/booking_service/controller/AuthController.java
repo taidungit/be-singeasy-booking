@@ -180,7 +180,7 @@ public class AuthController {
     public ResponseEntity<UserResDto> register(@Valid @RequestBody User user) throws IdInvalidException {
         boolean isExist = this.userService.isEmailExist(user.getEmail());
         if (isExist) {
-            throw new IdInvalidException("Email đã tồn tại");
+            throw new IdInvalidException("Email already exists");
         }
         String hashPassword = this.passwordEncoder.encode(user.getPassword());
         user.setPassword(hashPassword);
