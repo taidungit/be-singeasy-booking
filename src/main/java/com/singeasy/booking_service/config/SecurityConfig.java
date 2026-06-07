@@ -43,7 +43,8 @@ public class SecurityConfig {
                 "/api/v1/shops/**", 
                 "/api/v1/rooms/**",
                 "/api/v1/dev-tools/**",
-                "/api/v1/search-utilities/**"
+                "/api/v1/search-utilities/**",
+                "/api/v1/reviews/**"
                 };
 
         http
