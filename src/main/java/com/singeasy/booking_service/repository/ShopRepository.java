@@ -14,7 +14,7 @@ import com.singeasy.booking_service.enums.ShopStatus;
 @Repository
 public interface ShopRepository extends JpaRepository<KaraokeShop, Long> {
     // Tìm tất cả các shop chưa bị xóa (Status khác DELETED)
-    List<KaraokeShop> findByStatusNot(ShopStatus status);
+    List<KaraokeShop> findByStatusNotOrderByIdAsc(ShopStatus status);
 
     // Tìm một shop cụ thể theo ID và phải chưa bị xóa
     Optional<KaraokeShop> findByIdAndStatusNot(Long id, ShopStatus status);

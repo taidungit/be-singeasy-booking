@@ -32,7 +32,7 @@ public class ShopService {
     }
 
     public List<ShopResDto> findShops() {
-        return shopRepository.findByStatusNot(ShopStatus.DELETED)
+        return shopRepository.findByStatusNotOrderByIdAsc(ShopStatus.DELETED)
                 .stream()
                 .map(this::convertToResDto)
                 .toList();
