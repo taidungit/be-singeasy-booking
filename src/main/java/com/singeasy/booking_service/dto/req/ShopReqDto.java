@@ -8,23 +8,25 @@ import lombok.Data;
 
 @Data
 public class ShopReqDto {
-    @NotBlank(message = "Tên quán không được để trống")
+    @NotBlank(message = "Please fill in the shop name")
     private String name;
 
-    @NotBlank(message = "Thành phố không được để trống")
+    @NotBlank(message = "Please fill in the city")
     private String city;
 
-    @NotBlank(message = "Số điện thoại không được để trống")
+    @NotBlank(message = "Please fill in the phone number")
     private String phoneNumber;
 
-    @NotBlank(message = "Địa chỉ không được để trống")
+    @NotBlank(message = "Please fill in the address")
     private String address;
 
+    @NotBlank(message = "Please fill in the opening hours")
     private String openingHours;
-    
-    @Min(value = 0, message = "Giá không được nhỏ hơn 0")
+
+    @Min(value = 0, message = "Please fill in the minimum price per hour")
     private Double minPricePerHour;
 
+    @NotBlank(message = "Please upload an image for the shop")
     private String imageUrl;
     private String description;
     
