@@ -53,7 +53,7 @@ class ShopServiceTest {
         dto.setId(1L);
         dto.setName("Shop A");
 
-        when(shopRepository.findByStatusNot(ShopStatus.DELETED)).thenReturn(List.of(shop));
+        when(shopRepository.findByStatusNotOrderByIdAsc(ShopStatus.DELETED)).thenReturn(List.of(shop));
         when(modelMapper.map(shop, ShopResDto.class)).thenReturn(dto);
 
         List<ShopResDto> result = shopService.findShops();

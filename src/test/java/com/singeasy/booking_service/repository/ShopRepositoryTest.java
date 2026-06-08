@@ -19,7 +19,7 @@ class ShopRepositoryTest {
         shopRepository.save(RepositoryTestSupport.shop("Active Shop", "Hanoi", ShopStatus.ACTIVE));
         shopRepository.save(RepositoryTestSupport.shop("Deleted Shop", "Hanoi", ShopStatus.DELETED));
 
-        assertThat(shopRepository.findByStatusNot(ShopStatus.DELETED))
+        assertThat(shopRepository.findByStatusNotOrderByIdAsc(ShopStatus.DELETED))
                 .hasSize(1)
                 .first()
                 .extracting("name")
