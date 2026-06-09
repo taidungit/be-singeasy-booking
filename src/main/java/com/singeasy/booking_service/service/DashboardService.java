@@ -1,17 +1,21 @@
 package com.singeasy.booking_service.service;
 
 import com.singeasy.booking_service.dto.res.DashboardSummaryRes;
+import com.singeasy.booking_service.entity.KaraokeShop;
+import com.singeasy.booking_service.entity.Room;
+import com.singeasy.booking_service.entity.User;
 import com.singeasy.booking_service.enums.BookingStatusEnum;
 import com.singeasy.booking_service.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -21,6 +25,7 @@ public class DashboardService {
     private final RoomRepository roomRepository;
     private final BookingRepository bookingRepository;
     private final UserRepository userRepository; 
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy");
 
     public DashboardSummaryRes getDashboardSummary() {
         // 1. Lấy dữ liệu cho phần Stats
@@ -52,35 +57,37 @@ public class DashboardService {
                     .build());
         }
 
-        // 3. Lấy danh sách hoạt động gần đây (Recent Bookings) - Bọc chống Null an toàn
         List<DashboardSummaryRes.RecentActivity> recentActivities = bookingRepository.findTop5ByOrderByCreatedAtDesc()
-                .stream()
-                .map(b -> {
-                    // Kiểm tra an toàn cho thực thể User liên kết
-                    String customerName = (b.getUser() != null && b.getUser().getName() != null) 
-                            ? b.getUser().getName() 
-                            : "Guest User";
+        .stream()
+        .map(b -> {
+            // Lấy tên khách hàng an toàn
+            String customerName = Optional.ofNullable(b.getUser())
+                    .map(User::getName)
+                    .orElse("Guest User");
 
-                    // Kiểm tra an toàn cho thực thể Room liên kết
-                    String roomName = (b.getRoom() != null && b.getRoom().getName() != null) 
-                            ? b.getRoom().getName() 
-                            : "a room";
+            // Lấy tên phòng an toàn
+            String roomName = Optional.ofNullable(b.getRoom())
+                    .map(Room::getName)
+                    .orElse("a room");
 
-                    // Kiểm tra an toàn cho thực thể Shop liên kết xuyên suốt từ Room
-                    String shopName = "SingEasy Venue";
-                    if (b.getRoom() != null && b.getRoom().getShop() != null && b.getRoom().getShop().getName() != null) {
-                        shopName = b.getRoom().getShop().getName();
-                    }
+            String formattedDateTime = b.getCreatedAt() != null 
+                    ? b.getCreatedAt().format(DATE_TIME_FORMATTER) 
+                    : "--:--";
 
-                    return DashboardSummaryRes.RecentActivity.builder()
-                            .id(b.getId())
-                            .description("Customer " + customerName + " booked " + roomName)
-                            .timeAgo("Recent") 
-                            .branchName(shopName)
-                            .build();
-                })
-                .collect(Collectors.toList());
+            // Lấy tên chi nhánh (Shop) xuyên suốt từ Room an toàn
+            String shopName = Optional.ofNullable(b.getRoom())
+                    .map(Room::getShop)
+                    .map(KaraokeShop::getName)
+                    .orElse("SingEasy Venue");
 
+            return DashboardSummaryRes.RecentActivity.builder()
+                    .id(b.getId())
+                    .description(String.format("Customer %s booked %s", customerName, roomName))
+                    .timeAgo(formattedDateTime) 
+                    .branchName(shopName)
+                    .build();
+        })
+        .toList(); 
         return DashboardSummaryRes.builder()
                 .stats(stats)
                 .chartData(chartData)

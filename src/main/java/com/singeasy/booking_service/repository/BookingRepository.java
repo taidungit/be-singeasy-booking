@@ -23,6 +23,11 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
     Double calculateRevenueByDate(@Param("date") LocalDate date);
 
     // Lấy 5 đơn đặt phòng mới nhất để làm Hoạt động gần đây
+    @Query("SELECT b FROM Booking b " +
+           "LEFT JOIN FETCH b.user " +
+           "LEFT JOIN FETCH b.room r " +
+           "LEFT JOIN FETCH r.shop " +
+           "ORDER BY b.createdAt DESC")
     List<Booking> findTop5ByOrderByCreatedAtDesc();
 
     @Query("SELECT b FROM Booking b WHERE b.room.id = :roomId " +
